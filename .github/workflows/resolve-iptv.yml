@@ -6,13 +6,13 @@ name: Resolve IPTV real URLs
 # in this repo (pianha/devall).
 #
 # The real addresses carry timestamps/tokens and expire, so this runs
-# on a schedule. Adjust the cron below if you want another cadence.
+# on a schedule: roughly every 10 days is enough.
 
 on:
   workflow_dispatch:
   schedule:
-    # Every 6 hours (UTC)
-    - cron: "20 */6 * * *"
+    # 1st, 11th and 21st of each month, 02:20 UTC (10:20 Beijing)
+    - cron: "20 2 1,11,21 * *"
 
 permissions:
   contents: write
