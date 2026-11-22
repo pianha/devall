@@ -34,7 +34,7 @@ UA = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/130.0.0.0 Safari/537.36"
 )
-WORKERS = int(os.environ.get("RESOLVE_WORKERS", "32"))
+WORKERS = int(os.environ.get("RESOLVE_WORKERS", "10"))
 TIMEOUT = float(os.environ.get("RESOLVE_TIMEOUT", "15"))
 LIMIT = int(os.environ.get("RESOLVE_LIMIT", "0"))
 
@@ -49,7 +49,15 @@ def fetch_source(source):
 
 
 def resolve_one(url):
-    """Follow redirects like a browser; return (final_url, ok)."""
+    """Follow redirects like a browser; return (final_url, changed).
+
+    Only a final URL that still points at an m3u8 playlist counts as a
+    real address. The redirector sometimes answers with a decoy mp4
+    (e.g. https://www.mpimg.cn/view.php/<hash>.mp4) when it does not want
+    to hand out the real stream; writing that into the list would break
+    every channel, so a non-m3u8 final URL is treated as unresolved and
+    the original URL is kept.
+    """
     for _attempt in range(2):
         try:
             req = urllib.request.Request(
@@ -58,7 +66,7 @@ def resolve_one(url):
             with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
                 final = resp.geturl()
                 status = resp.status
-            if status == 200 and final:
+            if status == 200 and final and ".m3u8" in final:
                 return final, final != url
             return url, False
         except Exception:
