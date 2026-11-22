@@ -1,0 +1,50 @@
+name: Resolve IPTV real URLs
+
+# Fetch pianha/IPTV-Unicom IPTV.m3u, follow the 302 chain of every
+# /play/<id>.m3u8 entry the way a browser does, replace each entry with
+# the final real m3u8 address, and commit the result as IPTV-real.m3u
+# in this repo (pianha/devall).
+#
+# The real addresses carry timestamps/tokens and expire, so this runs
+# on a schedule. Adjust the cron below if you want another cadence.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every 6 hours (UTC)
+    - cron: "20 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: resolve-iptv
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve real URLs
+        run: python3 resolve.py
+
+      - name: Commit result if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add IPTV-real.m3u
+          if git diff --cached --quiet; then
+            echo "No changes, nothing to commit."
+          else
+            git commit -m "Update IPTV-real.m3u ($(date -u +%Y-%m-%dT%H:%MZ))"
+            git push
+          fi
